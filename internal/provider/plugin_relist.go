@@ -28,9 +28,9 @@ var (
 
 // relistPlugins asks the plugins for their providers and models again,
 // and keeps the answer (plugin.Providers); nil with no plugin installed or
-// no Bun to run one. Tests replace it.
+// no runtime to run one. Tests replace it.
 var relistPlugins = func(ctx context.Context) ([]plugin.Provider, error) {
-	if len(plugin.Load().Plugins) == 0 || !plugin.Running() && !plugin.HasBun() {
+	if len(plugin.Load().Plugins) == 0 || !plugin.Running() && !plugin.HasRuntime() {
 		return nil, nil
 	}
 	return plugin.Providers(ctx)

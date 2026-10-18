@@ -38,6 +38,12 @@ var hostJS []byte
 //go:embed pi.js
 var piJS []byte
 
+// nodeShimJS stands the few Bun globals host.js reads up on Node, where
+// magpie runs plugins because Bun has no build for the machine (armv7).
+//
+//go:embed node-shim.cjs
+var nodeShimJS []byte
+
 // message is a line the host writes.
 type message struct {
 	ID     int64           `json:"id"`
@@ -780,15 +786,25 @@ func (h *host) stop() {
 	}
 }
 
-// hostFile is host.js written where Bun can run it.
-func hostFile() (string, error) { return hostScript("host", hostJS) }
+// hostFile is host.js written where the runtime can run it: Node reads
+// the same script as a .mjs, since nothing there says it is a module.
+func hostFile() (string, error) { return hostScript("host", hostJS, scriptExt()) }
 
-// hostScript is a script of the host written where Bun can run it, named
-// by what it holds.
-func hostScript(name string, js []byte) (string, error) {
+// scriptExt is the extension a host script needs on the runtime picked:
+// .js runs as ESM under Bun, .mjs under Node.
+func scriptExt() string {
+	if useNode() {
+		return ".mjs"
+	}
+	return ".js"
+}
+
+// hostScript is a script of the host written where the runtime can run
+// it, named by what it holds.
+func hostScript(name string, js []byte, ext string) (string, error) {
 	sum := sha256.Sum256(js)
 	dir := filepath.Join(filepath.Dir(catalog.CachePath()), "plugin-host")
-	p := filepath.Join(dir, name+"-"+hex.EncodeToString(sum[:6])+".js")
+	p := filepath.Join(dir, name+"-"+hex.EncodeToString(sum[:6])+ext)
 	if b, err := os.ReadFile(p); err == nil && string(b) == string(js) {
 		return p, nil
 	}
@@ -834,6 +850,17 @@ func getLocked(ctx context.Context) (*host, error) {
 }
 
 func start(ctx context.Context) (*host, error) {
+	if useNode() {
+		node, err := Node(ctx)
+		if err != nil {
+			return nil, err
+		}
+		h, crashed, err := startOn(ctx, node)
+		if crashed {
+			err = whyDied(ctx, node, err)
+		}
+		return h, nodeHostError(node, err)
+	}
 	bun, err := Bun(ctx)
 	if err != nil {
 		return nil, err
@@ -884,14 +911,14 @@ func cancelCatalogSyncs() {
 	catalogSyncing.Wait()
 }
 
-// startOn starts the host on the bun given; crashed is whether it died
-// before it started.
-func startOn(ctx context.Context, bun string) (*host, bool, error) {
+// startOn starts the host on the runtime exe given (a bun or a node);
+// crashed is whether it died before it started.
+func startOn(ctx context.Context, exe string) (*host, bool, error) {
 	js, err := hostFile()
 	if err != nil {
 		return nil, false, err
 	}
-	pi, err := hostScript("pi", piJS)
+	pi, err := hostScript("pi", piJS, scriptExt())
 	if err != nil {
 		return nil, false, err
 	}
@@ -924,8 +951,11 @@ func startOn(ctx context.Context, bun string) (*host, bool, error) {
 		}()
 	}
 	// the host outlives the request that started it
-	proxy := hostProxy(env()) // what bunCommand gives it
-	cmd := bunCommand(context.Background(), bun, settings.Dir(), "run", js)
+	proxy := hostProxy(env()) // what the runtime command gives it
+	cmd, err := hostCommand(context.Background(), exe, settings.Dir(), js)
+	if err != nil {
+		return nil, false, err
+	}
 	cmd.Env = hostEnv(cmd.Env)
 	in, err := cmd.StdinPipe()
 	if err != nil {

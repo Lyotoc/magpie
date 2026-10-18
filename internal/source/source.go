@@ -22,9 +22,10 @@ import (
 const (
 	npmMirror    = "https://registry.npmmirror.com"
 	githubMirror = "https://gh-proxy.com"
-	// with the 「国内镜像」 switch: Bun's releases at npmmirror, and the
-	// plugin list at jsDelivr, both copies of the very files
+	// with the 「国内镜像」 switch: Bun's and Node's releases at npmmirror,
+	// and the plugin list at jsDelivr, both copies of the very files
 	bunMirror  = "https://registry.npmmirror.com/-/binary/bun"
+	nodeMirror = "https://registry.npmmirror.com/-/binary/node"
 	listMirror = "https://cdn.jsdelivr.net/gh/magpie-community/plugins@"
 )
 
@@ -37,10 +38,10 @@ var China = func() bool { return settings.Load().ChinaMirror }
 
 // chinaFirst is the mirror in China asked before raw with the switch on,
 // "" when there is none. Only mirrors that serve the same bytes as the
-// official address: npmmirror for npm's registry and Bun's releases (whose
-// zips are checked against Bun's checksums all the same), jsDelivr for the
-// community repo's plugin list. Never a proxy such as gh-proxy, which
-// would hand magpie whatever it liked.
+// official address: npmmirror for npm's registry and Bun's and Node's
+// releases (whose archives are checked against the release's checksums
+// all the same), jsDelivr for the community repo's plugin list. Never a
+// proxy such as gh-proxy, which would hand magpie whatever it liked.
 func chinaFirst(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" {
@@ -52,6 +53,12 @@ func chinaFirst(raw string) string {
 	case "github.com":
 		if rest, ok := strings.CutPrefix(u.EscapedPath(), "/oven-sh/bun/releases/download/"); ok && rest != "" {
 			return bunMirror + "/" + rest
+		}
+	case "nodejs.org":
+		// /dist/<version>/<file>, mirrored whole by npmmirror under
+		// binary/node; the checksum is still read from the official host
+		if rest, ok := strings.CutPrefix(u.EscapedPath(), "/dist/"); ok && rest != "" && u.RawQuery == "" {
+			return nodeMirror + "/" + rest
 		}
 	case "raw.githubusercontent.com":
 		// /magpie-community/plugins/<branch>/<path>

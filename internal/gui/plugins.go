@@ -198,8 +198,9 @@ const autoUpdatedFor = 3 * 24 * time.Hour
 
 type pluginsJSON struct {
 	Plugins []pluginEntryJSON `json:"plugins"`
-	Bun     bool              `json:"bun"` // Bun is here; adding the first plugin downloads it otherwise
+	Bun     bool              `json:"bun"` // the runtime is here; adding the first plugin downloads it otherwise
 	BunVer  string            `json:"bunVersion"`
+	Runtime string            `json:"runtime"`         // what the page calls it: "Bun" or "Node"
 	Error   string            `json:"error,omitempty"` // the plugins couldn't be asked
 	// Picker is whether this magpie can show the system's folder picker:
 	// `magpie web` has none, and the page then offers no button for it
@@ -213,7 +214,7 @@ type pluginsJSON struct {
 }
 
 func pluginsState(ctx context.Context, w Windows) pluginsJSON {
-	s := pluginsJSON{Plugins: []pluginEntryJSON{}, Bun: plugin.HasBun(), BunVer: plugin.BunInUse(), Movable: provider.MoveCandidates(), Picker: w != nil && !isWeb(w), Mirror: settings.Load().ChinaMirror}
+	s := pluginsJSON{Plugins: []pluginEntryJSON{}, Bun: plugin.HasRuntime(), BunVer: plugin.RuntimeInUse(), Runtime: plugin.RuntimeName(), Movable: provider.MoveCandidates(), Picker: w != nil && !isWeb(w), Mirror: settings.Load().ChinaMirror}
 	l := plugin.Load()
 	errs := map[string]string{}
 	names := map[string][]string{}
@@ -221,7 +222,7 @@ func pluginsState(ctx context.Context, w Windows) pluginsJSON {
 	idName := map[string]string{}
 	var tools []plugin.PluginTools
 	asked := false
-	if len(l.Plugins) > 0 && (plugin.Running() || plugin.HasBun()) {
+	if len(l.Plugins) > 0 && (plugin.Running() || plugin.HasRuntime()) {
 		loaded, err := plugin.Plugins(ctx)
 		if err != nil {
 			s.Error = err.Error()

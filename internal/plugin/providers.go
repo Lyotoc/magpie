@@ -360,7 +360,7 @@ func refreshProvidersWithRetry(ctx context.Context, epoch uint64) {
 func refreshProvidersInBackground(ctx context.Context, epoch uint64) {
 	defer refreshing.Done()
 	for {
-		if Running() || HasBun() {
+		if Running() || HasRuntime() {
 			refreshProvidersWithRetry(ctx, epoch)
 		}
 		provMu.Lock()

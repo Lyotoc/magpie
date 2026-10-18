@@ -15,5 +15,6 @@ func nativeLogChangeTime(info os.FileInfo) time.Time {
 	if !ok {
 		return time.Time{}
 	}
-	return time.Unix(stat.Ctim.Sec, stat.Ctim.Nsec)
+	// Ctim.Sec and Ctim.Nsec are int32 on 32-bit linux/arm, int64 on 64-bit.
+	return time.Unix(int64(stat.Ctim.Sec), int64(stat.Ctim.Nsec))
 }

@@ -117,7 +117,11 @@ func TestBunCommandsOneAtATime(t *testing.T) {
 		func() error { return installAt(ctx, "@magpie-community/opencode-grok-auth", "0.1.14") },
 		func() error { return reinstall(ctx, "github:owner/repo") },
 		func() error {
-			_, err := runBun(ctx, "bun", "remove", "--ignore-scripts", "x")
+			r, err := resolvePkg(ctx)
+			if err != nil {
+				return err
+			}
+			_, err = runPkg(ctx, r.removeCmd(ctx, "x"))
 			return err
 		},
 	}
