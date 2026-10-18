@@ -195,7 +195,9 @@ var tryBun = func(ctx context.Context, exe, v string) error {
 // switched to, the host restarted gracefully. It says the version taken,
 // "" when none was.
 func CheckBun(ctx context.Context) (string, error) {
-	if os.Getenv("MAGPIE_BUN") != "" {
+	if os.Getenv("MAGPIE_BUN") != "" || useNode() {
+		// a Bun the user named is theirs to update, and where Bun has no
+		// build for this machine plugins run on Node: nothing to check
 		return "", nil
 	}
 	latest, published, err := bunLatest(ctx)

@@ -424,9 +424,9 @@
     if (op === "add" || op === "upgrade" || op === "move") {
       b.classList.add("busy");
       if (op === "move") b.classList.add("move");
-      b.append(el("span", "spin"), el("span", "", op === "move" ? t("Moving…") : op === "upgrade" ? t("Updating…") : mine?.bun ? t("Installing…") : t("Getting Bun…")));
+      b.append(el("span", "spin"), el("span", "", op === "move" ? t("Moving…") : op === "upgrade" ? t("Updating…") : mine?.bun ? t("Installing…") : t("Getting {rt}…", { rt: mine?.runtime || "Bun" })));
       b.disabled = true;
-      if (!mine?.bun) b.title = t("Plugins run on Bun {v}, downloaded once", { v: mine?.bunVersion || "" });
+      if (!mine?.bun) b.title = t("Plugins run on {rt} {v}, downloaded once", { rt: mine?.runtime || "Bun", v: mine?.bunVersion || "" });
       return b;
     }
     // not known yet whether it's installed, or whether npm has it: a
@@ -917,7 +917,7 @@
     const box = el("div", "pm-intro");
     const text = el("div", "pm-introtext");
     text.append(el("h2", "", t("Plugins extend magpie")));
-    text.append(el("p", "", t("Plugins sign in to coding plans and make their requests; the models then work in every agent, like any provider's. They're OpenCode's provider plugins or pi's packages, run on Bun.")));
+    text.append(el("p", "", t("Plugins sign in to coding plans and make their requests; the models then work in every agent, like any provider's. They're OpenCode's provider plugins or pi's packages, run on {rt}.", { rt: mine?.runtime || "Bun" })));
     const mw = el("p", "");
     mw.append(document.createTextNode(t("A plugin can also run in magpie's gateway on what agents send and get back, pick which account a routing asks, give every agent tools, connect an agent, or add a page of its own.") + " "));
     // the docs in the reader's language: the site has en, zh and ja, and
@@ -1057,7 +1057,7 @@
     fill();
     body.append(list);
     const foot = el("div", "pm-foot");
-    foot.append(el("span", "", mine.bun ? t("Plugins run on Bun {v}", { v: mine.bunVersion }) : ""), el("span", "grow"));
+    foot.append(el("span", "", mine.bun ? t("Plugins run on {rt} {v}", { rt: mine.runtime || "Bun", v: mine.bunVersion }) : ""), el("span", "grow"));
     // npm has versions to ask for, and a git one's repository commits; a
     // folder has none
     if (es.some((e) => onNPM(e.spec) || isGit(e.spec))) {

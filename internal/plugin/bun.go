@@ -119,27 +119,37 @@ func bunExe() string {
 	return "bun"
 }
 
-// missingLibRe finds what a musl Linux's loader says when a program needs
-// a library the system lacks: "Error loading shared library
-// libstdc++.so.6: No such file or directory (needed by …)".
-var missingLibRe = regexp.MustCompile(`Error loading shared library ([^:\s]+)`)
+// missingLibRe finds what a loader says when a program needs a library
+// the system lacks: musl's "Error loading shared library libstdc++.so.6:
+// No such file or directory (needed by …)" and GNU ld's "error while
+// loading shared libraries: libstdc++.so.6:".
+var missingLibRe = regexp.MustCompile(`Error loading shared library ([^:\s]+)|error while loading shared libraries: (\S+):`)
 
-// missingLibs says which libraries a bun that started couldn't be linked
-// with lacks, from what it printed, "" when that isn't why it failed. Bun's
+// missingLibs names what a runtime that started couldn't be linked with
+// lacks, from what it printed, "" when that isn't why it failed. Bun's
 // musl build needs libstdc++ and libgcc, which a bare Alpine doesn't have
 // (#1877); the loader's first line names them, under a screenful of
-// "Error relocating" lines.
+// "Error relocating" lines. A Node that can't link says the same in GNU
+// ld's words. The hint is worded for the runtime magpie picked here.
 func missingLibs(out string) string {
 	var libs []string
 	for _, m := range missingLibRe.FindAllStringSubmatch(out, -1) {
-		if !slices.Contains(libs, m[1]) {
-			libs = append(libs, m[1])
+		lib := m[1]
+		if lib == "" {
+			lib = m[2]
+		}
+		if !slices.Contains(libs, lib) {
+			libs = append(libs, lib)
 		}
 	}
 	if len(libs) == 0 {
 		return ""
 	}
-	return fmt.Sprintf("this system lacks %s, which Bun needs (on Alpine: apk add libstdc++ libgcc), or set MAGPIE_BUN to a bun that runs here", strings.Join(libs, ", "))
+	rt, env := "Bun", "MAGPIE_BUN"
+	if useNode() {
+		rt, env = "Node", "MAGPIE_NODE"
+	}
+	return fmt.Sprintf("this system lacks %s, which %s needs (on Alpine: apk add libstdc++ libgcc), or set %s to a %s that runs here", strings.Join(libs, ", "), rt, env, strings.ToLower(rt))
 }
 
 // whyDied adds to the error of a host that died starting what the bun it
@@ -337,4 +347,19 @@ func registryEnv(env []string) []string {
 		}
 	}
 	return []string{"BUN_CONFIG_REGISTRY=" + source.NPMMirror + "/"}
+}
+
+// registryEnvNpm is registryEnv's answer for npm, which names its
+// registry with npm_config_registry and not with Bun's variable.
+func registryEnvNpm(env []string) []string {
+	if !source.China() {
+		return nil
+	}
+	for _, kv := range env {
+		k, v, _ := strings.Cut(kv, "=")
+		if strings.ToUpper(k) == "NPM_CONFIG_REGISTRY" && strings.TrimSpace(v) != "" {
+			return nil
+		}
+	}
+	return []string{"NPM_CONFIG_REGISTRY=" + source.NPMMirror + "/"}
 }

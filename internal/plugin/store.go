@@ -79,11 +79,12 @@ var listMu sync.Mutex
 // gone from package.json, and the plugin can't be loaded.
 var installMu sync.Mutex
 
-// runBun runs a bun command that changes plugins/, one at a time.
-func runBun(ctx context.Context, bun string, args ...string) ([]byte, error) {
+// runPkg runs a command that changes plugins/, one at a time; the caller
+// builds it with the runtime's methods (pkgRT in node.go).
+func runPkg(ctx context.Context, cmd *exec.Cmd) ([]byte, error) {
 	installMu.Lock()
 	defer installMu.Unlock()
-	return bunCommand(ctx, bun, Dir(), args...).CombinedOutput()
+	return cmd.CombinedOutput()
 }
 
 // Dir is the folder magpie installs npm plugins into.
@@ -407,8 +408,8 @@ func add(ctx context.Context, spec, version string) (Entry, error) {
 	if err := notPlugin(Target(spec)); err != nil {
 		// installed just now for this, and nothing loads it: taken out again
 		if !IsPath(spec) && !slices.Contains(slices.Collect(maps.Values(was)), Name(spec)) {
-			if bun, berr := Bun(ctx); berr == nil {
-				_, _ = runBun(ctx, bun, "remove", "--ignore-scripts", Name(spec))
+			if r, rerr := resolvePkg(ctx); rerr == nil {
+				_, _ = runPkg(ctx, r.removeCmd(ctx, Name(spec)))
 			}
 		}
 		return Entry{}, err
@@ -575,8 +576,8 @@ func Remove(ctx context.Context, name string) error {
 		return err
 	}
 	if !IsPath(e.Spec) {
-		if bun, err := Bun(ctx); err == nil {
-			_, _ = runBun(ctx, bun, "remove", "--ignore-scripts", Name(e.Spec))
+		if r, rerr := resolvePkg(ctx); rerr == nil {
+			_, _ = runPkg(ctx, r.removeCmd(ctx, Name(e.Spec)))
 		}
 	}
 	Restart()
@@ -685,10 +686,10 @@ func Called(pkg, name string) bool {
 	return name != "" && (ShortName(pkg) == name || bareName(pkg) == name)
 }
 
-// install puts an npm package into plugins/ with bun add, its scripts
-// left unrun as OpenCode leaves them.
+// install puts an npm package into plugins/ with the runtime's add, its
+// scripts left unrun as OpenCode leaves them.
 func install(ctx context.Context, spec string) error {
-	bun, err := Bun(ctx)
+	r, err := resolvePkg(ctx)
 	if err != nil {
 		return err
 	}
@@ -696,7 +697,7 @@ func install(ctx context.Context, spec string) error {
 		return err
 	}
 	// the package.json made for a first plugin is made under the lock
-	// too: written while another bun add writes its own, it would take
+	// too: written while another install writes its own, it would take
 	// every plugin out of it
 	installMu.Lock()
 	pj := filepath.Join(Dir(), "package.json")
@@ -707,13 +708,13 @@ func install(ctx context.Context, spec string) error {
 		}
 	}
 	defer installMu.Unlock()
-	err = bunAdd(ctx, bun, spec)
+	err = pkgAdd(ctx, r, spec)
 	// a @magpie-community package or version npm doesn't have (a new
 	// one waits for an owner to publish it there) comes from the
 	// community repo's dist branch; one Bun's minimumReleaseAge holds
 	// back stays held, as the user's bunfig asks
 	if name, version, ok := distWanted(spec); ok && err != nil && !minAge.MatchString(err.Error()) {
-		if derr := installDist(ctx, bun, name, version); derr != nil {
+		if derr := installDist(ctx, r, name, version); derr != nil {
 			return fmt.Errorf("%w (and from the community repo's dist branch: %v)", err, derr)
 		}
 		err = nil
@@ -722,19 +723,6 @@ func install(ctx context.Context, spec string) error {
 		pruneDist()
 	}
 	return err
-}
-
-// bunAdd adds spec to plugins/ with bun, its scripts left unrun.
-// installMu held.
-func bunAdd(ctx context.Context, bun, spec string) error {
-	out, err := bunCommand(ctx, bun, Dir(), "add", "--ignore-scripts", spec).CombinedOutput()
-	if err != nil {
-		if hint := missingLibs(string(out)); hint != "" {
-			return fmt.Errorf("bun add %s: %s: %w", spec, hint, err)
-		}
-		return fmt.Errorf("bun add %s: %v: %s", spec, cantStart(bun, err), lastLines(string(out), 6))
-	}
-	return nil
 }
 
 // installAt installs the version of the npm package given, not a tag, and
@@ -768,7 +756,7 @@ func installAt(ctx context.Context, pkg, version string) error {
 		if got == "" {
 			got = "nothing"
 		}
-		return fmt.Errorf("bun add %s@%s installed %s", pkg, version, got)
+		return fmt.Errorf("%s %s@%s installed %s", pkgLabel("add"), pkg, version, got)
 	}
 	return nil
 }
@@ -884,24 +872,27 @@ func ensurePi(ctx context.Context, target string) error {
 	return install(ctx, piAgent)
 }
 
-// reinstall installs spec again: an npm one with bun add, a git one with
-// bun update, which fetches its branch's (or tag's) commit now where bun
-// add keeps the one bun.lock has.
+// reinstall installs spec again: an npm one with the runtime's add, a
+// git one with its update, which fetches its branch's (or tag's) commit
+// now where an add keeps the one the lock file has.
 func reinstall(ctx context.Context, spec string) error {
 	name := Name(spec)
 	if !IsGit(spec) || name == spec {
 		return install(ctx, spec)
 	}
-	bun, err := Bun(ctx)
+	r, err := resolvePkg(ctx)
 	if err != nil {
 		return err
 	}
-	out, err := runBun(ctx, bun, "update", "--ignore-scripts", name)
+	out, err := runPkg(ctx, r.updateCmd(ctx, name, spec))
 	if err != nil {
-		if hint := missingLibs(string(out)); hint != "" {
-			return fmt.Errorf("bun update %s: %s: %w", name, hint, err)
+		if !r.node {
+			if hint := missingLibs(string(out)); hint != "" {
+				return fmt.Errorf("%s %s: %s: %w", pkgLabel("update"), name, hint, err)
+			}
+			return fmt.Errorf("%s %s: %v: %s", pkgLabel("update"), name, cantStart(r.exe, err), lastLines(string(out), 6))
 		}
-		return fmt.Errorf("bun update %s: %v: %s", name, cantStart(bun, err), lastLines(string(out), 6))
+		return fmt.Errorf("%s %s: %v: %s", pkgLabel("update"), name, nodeHostError(r.exe, err), lastLines(string(out), 6))
 	}
 	return nil
 }

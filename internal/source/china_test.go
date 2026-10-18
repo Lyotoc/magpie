@@ -31,7 +31,12 @@ func TestChinaFirst(t *testing.T) {
 		"https://registry.npmjs.org/@magpie-community%2fopencode-kiro-auth":                  "https://registry.npmmirror.com/@magpie-community%2fopencode-kiro-auth",
 		"https://registry.npmjs.org/-/v1/search?text=opencode&size=20":                       "https://registry.npmmirror.com/-/v1/search?text=opencode&size=20",
 		"https://github.com/oven-sh/bun/releases/download/bun-v1.4.2/bun-darwin-aarch64.zip": "https://registry.npmmirror.com/-/binary/bun/bun-v1.4.2/bun-darwin-aarch64.zip",
-		"https://raw.githubusercontent.com/magpie-community/plugins/main/registry.json":      "https://cdn.jsdelivr.net/gh/magpie-community/plugins@main/registry.json",
+		"https://nodejs.org/dist/v22.23.3/node-v22.23.3-linux-armv7l.tar.gz":                 "https://registry.npmmirror.com/-/binary/node/v22.23.3/node-v22.23.3-linux-armv7l.tar.gz",
+		// only the dist tree is mirrored; and never with a query
+		"https://nodejs.org/en/about/":                                                  "",
+		"https://nodejs.org/dist/":                                                      "",
+		"https://nodejs.org/dist/v22.23.3/x.tar.gz?t=1":                                 "",
+		"https://raw.githubusercontent.com/magpie-community/plugins/main/registry.json": "https://cdn.jsdelivr.net/gh/magpie-community/plugins@main/registry.json",
 		// npm's download counts are npmjs's own: npmmirror counts its own
 		"https://api.npmjs.org/downloads/point/last-week/pkg": "",
 		// nothing else of GitHub's: no proxy stands in for it
