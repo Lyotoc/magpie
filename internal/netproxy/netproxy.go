@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/settings"
+	"golang.org/x/net/http/httpproxy"
 )
 
 // Install routes http.DefaultTransport (and so http.DefaultClient) through
@@ -252,6 +253,11 @@ func For(u *url.URL) (*url.URL, error) {
 	if p, err := fromEnv(u); p != nil || err != nil {
 		return p, err
 	}
+	// A bypass in NO_PROXY applies to the system proxy too. Otherwise a
+	// request bypassing *_PROXY can still leave through macOS's proxy.
+	if noProxy(u.Hostname(), envOf("NO_PROXY", "no_proxy")) {
+		return nil, nil
+	}
 	sys := System()
 	if sys.URL == "" || bypassed(u.Hostname(), sys.Bypass) {
 		return nil, nil
@@ -396,7 +402,9 @@ func Redact(raw string) string {
 // and magpie, its updates among its requests, too). NO_PROXY is kept for
 // it as well.
 func fromEnv(u *url.URL) (*url.URL, error) {
-	if p, err := http.ProxyFromEnvironment(&http.Request{URL: u}); p != nil || err != nil {
+	// ProxyFromEnvironment caches the first environment it sees for the
+	// process. Settings and tests can change it while magpie is running.
+	if p, err := httpproxy.FromEnvironment().ProxyFunc()(u); p != nil || err != nil {
 		return p, err
 	}
 	all := envOf("ALL_PROXY", "all_proxy")
