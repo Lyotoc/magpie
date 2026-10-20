@@ -1,0 +1,5 @@
+{
+  "name": "fakeco-plugin",
+  "private": true,
+  "type": "module"
+}

@@ -31,12 +31,17 @@ func TestChinaFirst(t *testing.T) {
 		"https://registry.npmjs.org/@magpie-community%2fopencode-kiro-auth":                            "https://registry.npmmirror.com/@magpie-community%2fopencode-kiro-auth",
 		"https://registry.npmjs.org/-/v1/search?text=opencode&size=20":                                 "https://registry.npmmirror.com/-/v1/search?text=opencode&size=20",
 		"https://github.com/oven-sh/bun/releases/download/bun-v1.4.2/bun-darwin-aarch64.zip":           "https://registry.npmmirror.com/-/binary/bun/bun-v1.4.2/bun-darwin-aarch64.zip",
+		"https://nodejs.org/dist/v22.23.3/node-v22.23.3-linux-armv7l.tar.gz":                           "https://registry.npmmirror.com/-/binary/node/v22.23.3/node-v22.23.3-linux-armv7l.tar.gz",
 		"https://raw.githubusercontent.com/magpie-community/plugins/main/registry.json":                "https://cdn.jsdelivr.net/gh/magpie-community/plugins@main/registry.json",
 		"https://huggingface.co/LocalAI-io/privacy-filter-GGUF/resolve/935d868/privacy-filter-q8.gguf": "https://hf-mirror.com/LocalAI-io/privacy-filter-GGUF/resolve/935d868/privacy-filter-q8.gguf",
 		// no other model, and no page of Hugging Face's
 		"https://huggingface.co/someone/else/resolve/main/x.gguf":                   "",
 		"https://huggingface.co/LocalAI-io/privacy-filter-GGUF":                     "",
 		"https://huggingface.co/LocalAI-io/privacy-filter-GGUF/resolve/main/x?dl=1": "",
+		// only Node's dist tree is mirrored, and never with a query
+		"https://nodejs.org/en/about/":                  "",
+		"https://nodejs.org/dist/":                      "",
+		"https://nodejs.org/dist/v22.23.3/x.tar.gz?t=1": "",
 		// npm's download counts are npmjs's own: npmmirror counts its own
 		"https://api.npmjs.org/downloads/point/last-week/pkg": "",
 		// nothing else of GitHub's: no proxy stands in for it

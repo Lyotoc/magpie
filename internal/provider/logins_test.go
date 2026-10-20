@@ -134,7 +134,7 @@ func TestClaudeLogins(t *testing.T) {
 	cred := claudeSignIn(t, home, time.Now().Add(time.Hour))
 	profile := filepath.Join(home, ".claude.json")
 	writeFile(t, profile, map[string]any{
-		"numStartups":  1234567890123,
+		"numStartups":  int64(1234567890123),
 		"oauthAccount": map[string]any{"emailAddress": "a@example.com", "accountUuid": "u-a"},
 	})
 	rememberLogins(true)
@@ -146,7 +146,7 @@ func TestClaudeLogins(t *testing.T) {
 		"mcpOAuth": map[string]any{"keep": true},
 	})
 	writeFile(t, profile, map[string]any{
-		"numStartups":  1234567890123,
+		"numStartups":  int64(1234567890123),
 		"oauthAccount": map[string]any{"emailAddress": "b@example.com", "accountUuid": "u-b"},
 	})
 	forgetClaudeCredential()

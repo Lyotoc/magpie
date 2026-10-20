@@ -136,9 +136,9 @@ var exactVersion = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0
 
 // installDist installs the package's version from the dist branch: its
 // tarball fetched, checked against the index's sha512, kept in
-// plugins/dist (bun.lock names it there, and a later bun add installs it
-// again from it), and added with bun. installMu held.
-func installDist(ctx context.Context, bun, name, version string) error {
+// plugins/dist (the lock file names it there, and a later add installs it
+// again from it), and added with the runtime's add. installMu held.
+func installDist(ctx context.Context, r pkgRT, name, version string) error {
 	d := distPkg(ctx, name)
 	if d == nil {
 		return fmt.Errorf("the community repo's dist branch has no %s, or can't be read", name)
@@ -181,7 +181,7 @@ func installDist(ctx context.Context, bun, name, version string) error {
 		os.Remove(tmp.Name())
 		return werr
 	}
-	return bunAdd(ctx, bun, "./dist/"+file)
+	return pkgAdd(ctx, r, "./dist/"+file)
 }
 
 // pruneDist takes out the tarballs in plugins/dist that plugins/package.json

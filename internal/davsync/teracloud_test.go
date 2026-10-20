@@ -58,7 +58,7 @@ func newApacheDAV() *apacheDAV {
 // the size and the time, in hex).
 func (a *apacheDAV) write(p string, b []byte) {
 	a.n++
-	a.files[p], a.etags[p] = b, fmt.Sprintf(`"%x-%x"`, len(b), 0x5d88268abcf08+a.n)
+	a.files[p], a.etags[p] = b, fmt.Sprintf(`"%x-%x"`, len(b), int64(0x5d88268abcf08)+int64(a.n))
 }
 
 func (a *apacheDAV) ServeHTTP(w http.ResponseWriter, r *http.Request) {

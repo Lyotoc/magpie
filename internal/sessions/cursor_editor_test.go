@@ -146,7 +146,7 @@ func TestCursorEditorTranscript(t *testing.T) {
 func TestCursorEditorDoesNotDuplicateCLI(t *testing.T) {
 	dir := cursorSetup(t)
 	t.Setenv("CURSOR_DATA_DIR", dir)
-	makeCursorChat(t, dir, curChat{id: curMain, cwd: curCwd, meta: map[string]any{"name": "CLI chat", "createdAt": curT0}, messages: []string{`{"role":"user","content":"hello"}`}})
+	makeCursorChat(t, dir, curChat{id: curMain, cwd: curCwd, meta: map[string]any{"name": "CLI chat", "createdAt": int64(curT0)}, messages: []string{`{"role":"user","content":"hello"}`}})
 	editorTranscript(t, dir, curMain, time.Now())
 	ss := List(All)
 	if n := count(ss, "cursor"); n != 1 {

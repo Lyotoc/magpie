@@ -31,7 +31,7 @@ func TestZCodeCallInputLeavesOutCache(t *testing.T) {
 		{5000, 3000, 1500, 10, 0},
 	}
 	for i, r := range rows {
-		at := int64(1790497000000 + i*10000)
+		at := int64(1790497000000) + int64(i)*10000
 		ocInsert(t, db, "ses_zcC", fmt.Sprintf("msg_zh%d", i), at, at+5000, fmt.Sprintf(`{"id":"msg_zh%d","role":"assistant","modelId":"glm-5.3-flash","providerID":"zai","tokens":{"input":%d,"output":%d,"reasoning":%d,"cache":{"read":%d,"write":%d}},"time":{"created":%d,"completed":%d}}`,
 			i, r.input, r.output, r.reasoning, r.read, r.write, at, at+5000))
 	}

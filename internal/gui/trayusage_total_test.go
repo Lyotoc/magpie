@@ -98,9 +98,12 @@ func TestTrayTotalsBesideCards(t *testing.T) {
 }
 
 func TestTrayCount(t *testing.T) {
-	for n, want := range map[int]string{0: "0", 950: "950", 1000: "1.0K", 8_249: "8.2K", 456_400: "456K",
+	for n, want := range map[int64]string{0: "0", 950: "950", 1000: "1.0K", 8_249: "8.2K", 456_400: "456K",
 		1_230_000: "1.2M", 133_400_000: "133M", 2_345_000_000: "2.35B"} {
-		if got := trayCount(n); got != want {
+		if int64(int(n)) != n { // this count cannot fit in int on a 32-bit build
+			continue
+		}
+		if got := trayCount(int(n)); got != want {
 			t.Errorf("trayCount(%d) = %q, want %q", n, got, want)
 		}
 	}

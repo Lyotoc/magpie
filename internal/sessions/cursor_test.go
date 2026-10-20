@@ -129,8 +129,8 @@ func makeCursorChat(t *testing.T, dir string, c curChat) string {
 }
 
 const (
-	curT0 = 1790500000000 // createdAt
-	curT1 = 1790503600000 // updatedAt, an hour on
+	curT0 int64 = 1790500000000 // createdAt
+	curT1 int64 = 1790503600000 // updatedAt, an hour on
 )
 
 // makeCursorChats are a chat with a compaction behind it and a subagent's

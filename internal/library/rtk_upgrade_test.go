@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -160,14 +161,20 @@ func TestRTKUpgradeFailureSaid(t *testing.T) {
 		"  ██████████████▒▒▒▒▒▒▒▒▒▒▒▒  1.20 MB / 3.40 MB\r  ██████████████████████████  3.40 MB / 3.40 MB\r\n" +
 		"Successfully verified installer hash\r\nExtracting archive...\r\n\x1b[31mThe file cannot be accessed by the system.\x1b[0m\r\n   - \r"
 	// ExitCode is the HRESULT's uint32 on 64-bit Windows; negative as an int32
-	for _, code := range []int{0x8A150101, -1978334975} {
+	codes := []int{-1978334975} // winget's HRESULT as signed int32
+	if strconv.IntSize == 64 {
+		unsignedCode := uint64(0x8A150101)
+		codes = append(codes, int(unsignedCode))
+	}
+	for _, code := range codes {
 		msg := installFailed(winget, out, code, nil).Error()
 		want := "winget failed (exit code 0x8A150101): RTK is in use — close the agents running it and try again — Successfully verified installer hash Extracting archive... The file cannot be accessed by the system."
 		if msg != want {
 			t.Fatalf("code %d:\n got %q\nwant %q", code, msg, want)
 		}
 	}
-	if msg := installFailed(winget, "", 0x8A15002B, nil).Error(); msg != "winget failed (exit code 0x8A15002B): winget has no newer RTK than this one yet" {
+	notApplicable := uint32(0x8A15002B)
+	if msg := installFailed(winget, "", int(int32(notApplicable)), nil).Error(); msg != "winget failed (exit code 0x8A15002B): winget has no newer RTK than this one yet" {
 		t.Fatalf("not applicable: %q", msg)
 	}
 	if msg := installFailed([]string{"sh", "-c", "curl … | sh"}, "curl: (6) Could not resolve host: raw.githubusercontent.com\n", 6, nil).Error(); msg != "RTK's install script failed (exit code 6) — curl: (6) Could not resolve host: raw.githubusercontent.com" {

@@ -174,8 +174,9 @@ func TestRTKUpgradeAsksForAdmin(t *testing.T) {
 // user answers that it needs an administrator, and is run again through
 // Windows' administrator prompt. Any other installer's failure stays one.
 func TestRTKInstallRetriesAsAdmin(t *testing.T) {
+	code := wingetNeedsAdmin
 	needs := func(c []string, _ time.Duration, _ ...string) (string, error) {
-		return "", installFailed(c, "", int(wingetNeedsAdmin), errors.New("exit status"))
+		return "", installFailed(c, "", int(int32(code)), errors.New("exit status"))
 	}
 	p := runPlain
 	runPlain = needs
